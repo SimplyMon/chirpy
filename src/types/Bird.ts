@@ -5,4 +5,5 @@ export interface Bird {
   category?: string;
   order?: string;
   family?: string;
+  imageUrl?: string;
 }

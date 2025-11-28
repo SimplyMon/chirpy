@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Bird } from "../../types/Bird";
 import { fetchBirdsPage } from "../../services/ebirdService";
 import SearchBar from "../elements/SearchBar";
+import noimage from "../../assets/images/noimage.png";
 
 const PAGE_SIZE = 12;
 const MAX_PAGE_BUTTONS = 5;
@@ -149,6 +150,17 @@ export function BirdsScreen() {
                   color: "var(--text-primary)",
                 }}
               >
+                {bird.imageUrl && (
+                  <img
+                    src={bird.imageUrl || noimage}
+                    alt={bird.commonName}
+                    onError={(e) => {
+                      e.currentTarget.src = noimage;
+                    }}
+                    className="w-full h-48 object-contain rounded-lg mb-4 bg-gray-100"
+                  />
+                )}
+
                 <h2 className="text-xl sm:text-2xl font-semibold mb-2">
                   {bird.commonName}
                 </h2>
@@ -178,11 +190,17 @@ export function BirdsScreen() {
             ))}
           </div>
 
-          <div className="flex flex-wrap justify-center items-center mt-12 gap-3">
+          <div className="flex flex-wrap justify-center items-center mt-12 gap-2 sm:gap-3">
+            {/* Previous Button */}
             <button
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className="px-4 py-2 rounded-lg transition"
+              className="
+      px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg
+      border transition
+      disabled:opacity-40 disabled:cursor-not-allowed
+      hover:scale-105 hover:bg-opacity-80
+    "
               style={{
                 backgroundColor: "var(--bg-card)",
                 color: "var(--text-primary)",
@@ -192,11 +210,15 @@ export function BirdsScreen() {
               Previous
             </button>
 
+            {/* Page Buttons */}
             {getPageButtons().map((page) => (
               <button
                 key={page}
                 onClick={() => goToPage(page)}
-                className="px-4 py-2 rounded-lg transition"
+                className={`
+        px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border transition
+        hover:scale-105 hover:bg-opacity-80
+      `}
                 style={{
                   backgroundColor:
                     currentPage === page
@@ -213,16 +235,26 @@ export function BirdsScreen() {
               </button>
             ))}
 
+            {/* Ellipsis */}
             {totalPages > getPageButtons()[getPageButtons().length - 1] && (
-              <span style={{ color: "var(--text-secondary)" }} className="px-2">
+              <span
+                className="px-2 text-lg"
+                style={{ color: "var(--text-secondary)" }}
+              >
                 …
               </span>
             )}
 
+            {/* Next Button */}
             <button
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 rounded-lg transition"
+              className="
+      px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg
+      border transition
+      disabled:opacity-40 disabled:cursor-not-allowed
+      hover:scale-105 hover:bg-opacity-80
+    "
               style={{
                 backgroundColor: "var(--bg-card)",
                 color: "var(--text-primary)",
