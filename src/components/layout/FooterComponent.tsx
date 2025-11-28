@@ -3,7 +3,6 @@ export function FooterComponent() {
     <footer className="bg-(--bg-light shadow-inner mt-12">
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-12">
         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-10">
-          {/* Logo & Description */}
           <div className="mb-10 md:mb-0 md:w-1/3">
             <div className="flex items-center">
               <span className="text-3xl mr-3 font-bold text-(--accent-bird">
@@ -20,7 +19,6 @@ export function FooterComponent() {
             </p>
           </div>
 
-          {/* Links */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 md:w-2/3">
             <div>
               <h4 className="text-(--text-primary font-semibold mb-4">
@@ -70,7 +68,6 @@ export function FooterComponent() {
           </div>
         </div>
 
-        {/* Bottom copyright */}
         <div className="mt-12 border-t border-(--border pt-6 text-(--text-secondary text-sm text-center md:text-left">
           © {new Date().getFullYear()} Mon.Dev. All rights reserved.
         </div>
