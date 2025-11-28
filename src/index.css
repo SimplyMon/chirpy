@@ -1,7 +1,16 @@
 @import "tailwindcss";
 
-* {
-  background-color: rgb(20, 20, 20);
-  color: wheat;
+body {
   font-family: "Poppins", sans-serif;
+  background: #faf5f0;
+}
+
+:root {
+  --bg-light: #faf5f0;
+  --bg-card: #f0e6dd;
+  --text-primary: #4b3f36;
+  --text-secondary: #6e5a4e;
+  --accent-leaf: #a8c098;
+  --accent-bird: #f4a261;
+  --border: #d7c6b9;
 }

@@ -1,51 +1,69 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 export function HeaderComponent() {
   const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
+
+  const isActive = (path: string) => location.pathname === path;
 
   return (
-    <nav className="bg-white shadow-md fixed w-full z-10">
+    <nav
+      style={{
+        backgroundColor: "var(--bg-light)",
+        color: "var(--text-primary)",
+      }}
+      className="shadow-md fixed w-full z-10"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          <div className="shrink-0 flex items-center">
-            <span className="text-2xl font-bold text-blue-600">Chirpy</span>
+          <div className="shrink-0 flex items-center space-x-2">
+            <span
+              style={{ color: "var(--accent-bird)" }}
+              className="text-2xl font-bold"
+            >
+              ChirpyFind
+            </span>
+            <img
+              src="https://www.svgrepo.com/show/530309/bird.svg"
+              alt="Chirpy Logo"
+              className="w-10 h-10"
+            />
           </div>
 
           <div className="hidden md:flex md:items-center space-x-6">
-            <Link
-              to={"/"}
-              className="text-gray-700 hover:text-blue-600 font-medium"
-            >
-              Home
-            </Link>
-            <Link
-              to={"/birds"}
-              className="text-gray-700 hover:text-blue-600 font-medium"
-            >
-              Birds
-            </Link>
-            <Link
-              to={"/about"}
-              className="text-gray-700 hover:text-blue-600 font-medium"
-            >
-              About
-            </Link>
-            <Link
-              to={"/contact"}
-              className="text-gray-700 hover:text-blue-600 font-medium"
-            >
-              Contact
-            </Link>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition flex items-center">
-              <i className="fa fa-user-plus mr-2"></i> Sign Up
-            </button>
+            {["/", "/birds", "/about"].map((path, idx) => {
+              const labels = ["Home", "Birds", "About"];
+              return (
+                <Link
+                  key={path}
+                  to={path}
+                  style={{
+                    color: isActive(path)
+                      ? "var(--accent-bird)"
+                      : "var(--text-primary)",
+                  }}
+                  className="font-medium transition"
+                  onMouseEnter={(e) => {
+                    if (!isActive(path))
+                      e.currentTarget.style.color = "var(--accent-leaf)";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive(path))
+                      e.currentTarget.style.color = "var(--text-primary)";
+                  }}
+                >
+                  {labels[idx]}
+                </Link>
+              );
+            })}
           </div>
 
           <div className="flex items-center md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-700 hover:text-blue-600 focus:outline-none"
+              style={{ color: "var(--text-primary)" }}
+              className="focus:outline-none"
             >
               {isOpen ? (
                 <i className="fa fa-times fa-2x"></i>
@@ -58,34 +76,42 @@ export function HeaderComponent() {
       </div>
 
       {isOpen && (
-        <div className="md:hidden bg-white shadow-md">
-          <Link
-            to={"/"}
-            className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
-          >
-            Home
-          </Link>
-          <Link
-            to={"birds"}
-            className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
-          >
-            Birds
-          </Link>
-          <Link
-            to={"/about"}
-            className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
-          >
-            About
-          </Link>
-          <Link
-            to={"/contact"}
-            className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition"
-          >
-            Contact
-          </Link>
-          <button className="w-full text-left px-4 py-2 bg-blue-600 text-white rounded-md mt-2 hover:bg-blue-700 transition flex items-center">
-            <i className="fa fa-user-plus mr-2"></i> Sign Up
-          </button>
+        <div
+          style={{ backgroundColor: "var(--bg-light)" }}
+          className="md:hidden shadow-md"
+        >
+          {["/", "/birds", "/about"].map((path, idx) => {
+            const labels = ["Home", "Birds", "About"];
+            return (
+              <Link
+                key={path}
+                to={path}
+                style={{
+                  color: isActive(path)
+                    ? "var(--accent-bird)"
+                    : "var(--text-primary)",
+                  backgroundColor: isActive(path)
+                    ? "var(--bg-card)"
+                    : "transparent",
+                }}
+                className="block px-4 py-2 transition"
+                onMouseEnter={(e) => {
+                  if (!isActive(path))
+                    e.currentTarget.style.color = "var(--accent-leaf)";
+                  if (!isActive(path))
+                    e.currentTarget.style.backgroundColor = "var(--bg-card)";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive(path))
+                    e.currentTarget.style.color = "var(--text-primary)";
+                  if (!isActive(path))
+                    e.currentTarget.style.backgroundColor = "transparent";
+                }}
+              >
+                {labels[idx]}
+              </Link>
+            );
+          })}
         </div>
       )}
     </nav>

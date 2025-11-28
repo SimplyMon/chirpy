@@ -4,6 +4,7 @@ import { HomeScreen } from "./components/screen/HomeScreen";
 import { HeaderComponent } from "./components/layout/HeaderComponent";
 import { FooterComponent } from "./components/layout/FooterComponent";
 import { AboutScreen } from "./components/screen/AboutScreen";
+import { BirdsScreen } from "./components/screen/BirdsScreen";
 import { NotFound } from "./components/layout/NotFound";
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
       <HeaderComponent />
       <Routes>
         <Route path="/" element={<HomeScreen />} />
+        <Route path="/birds" element={<BirdsScreen />} />
         <Route path="/about" element={<AboutScreen />} />
 
         <Route path="*" element={<NotFound />} />
