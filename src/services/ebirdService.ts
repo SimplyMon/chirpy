@@ -24,18 +24,14 @@ interface WikimediaPage {
 }
 
 let cachedBirds: EbirdApiBird[] | null = null;
-
 const imageCache: Record<string, string> = {};
 
-async function fetchWikimediaImage(
+export async function fetchWikimediaImage(
   scientificName: string
 ): Promise<string | null> {
-  if (imageCache[scientificName]) {
-    return imageCache[scientificName];
-  }
+  if (imageCache[scientificName]) return imageCache[scientificName];
 
   const search = encodeURIComponent(scientificName);
-
   try {
     const searchRes = await fetch(
       `https://en.wikipedia.org/w/api.php?origin=*&action=query&format=json&list=search&srsearch=${search}&srlimit=1`
@@ -45,7 +41,6 @@ async function fetchWikimediaImage(
     if (!pages?.length) return null;
 
     const pageTitle = pages[0].title;
-
     const pageRes = await fetch(
       `https://en.wikipedia.org/w/api.php?origin=*&action=query&format=json&prop=pageimages&titles=${encodeURIComponent(
         pageTitle
@@ -54,7 +49,7 @@ async function fetchWikimediaImage(
     const pageData = await pageRes.json();
     const page = Object.values(pageData.query.pages)[0] as WikimediaPage;
 
-    if (page.original && page.original.source) {
+    if (page.original?.source) {
       imageCache[scientificName] = page.original.source;
       return page.original.source;
     }
@@ -75,7 +70,6 @@ export const fetchBirdsPage = async (
       headers: { "X-eBirdApiToken": API_KEY },
     });
     if (!res.ok) throw new Error("Failed to fetch birds");
-
     cachedBirds = await res.json();
   }
 
@@ -86,35 +80,21 @@ export const fetchBirdsPage = async (
     );
   }
 
-  filtered.sort((a, b) => {
-    const nameA = (a.comName ?? "").toLowerCase();
-    const nameB = (b.comName ?? "").toLowerCase();
-    return nameA.localeCompare(nameB);
-  });
+  filtered.sort((a, b) => (a.comName ?? "").localeCompare(b.comName ?? ""));
 
   const total = filtered.length;
   const start = (page - 1) * pageSize;
   const pageBirds = filtered.slice(start, start + pageSize);
 
-  const birdsWithImages: Bird[] = await Promise.all(
-    pageBirds.map(async (item) => {
-      const sciName = item.sciName ?? item.comName ?? "Bird";
-      const imageUrl = await fetchWikimediaImage(sciName);
-      return {
-        speciesCode: item.speciesCode,
-        commonName: item.comName ?? "Unknown",
-        scientificName: item.sciName ?? "Unknown",
-        category: item.category,
-        order: item.order,
-        family: item.family,
-        imageUrl:
-          imageUrl ??
-          `https://via.placeholder.com/400x300?text=${encodeURIComponent(
-            item.comName ?? "Bird"
-          )}`,
-      };
-    })
-  );
+  const birds: Bird[] = pageBirds.map((item) => ({
+    speciesCode: item.speciesCode,
+    commonName: item.comName ?? "Unknown",
+    scientificName: item.sciName ?? "Unknown",
+    category: item.category,
+    order: item.order,
+    family: item.family,
+    imageUrl: undefined,
+  }));
 
-  return { birds: birdsWithImages, total };
+  return { birds, total };
 };
