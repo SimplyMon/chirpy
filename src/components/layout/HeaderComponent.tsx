@@ -10,47 +10,47 @@ export function HeaderComponent() {
   return (
     <nav
       style={{
-        backgroundColor: "var(--bg-light)",
-        color: "var(--text-primary)",
+        backgroundColor: "var(--color-bg-dark)",
+        color: "var(--color-text)",
       }}
-      className="shadow-md fixed w-full z-10"
+      className="shadow-md fixed w-full z-50"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="shrink-0 flex items-center space-x-2">
-            <span
-              style={{ color: "var(--accent-bird)" }}
-              className="text-2xl font-bold"
-            >
-              ChirpyFind
-            </span>
-            <img
-              src="https://www.svgrepo.com/show/530309/bird.svg"
-              alt="Chirpy Logo"
-              className="w-10 h-10"
-            />
+            <Link to="/" className="flex items-center space-x-2">
+              <span
+                style={{ color: "var(--color-success)" }}
+                className="text-2xl font-bold"
+              >
+                ChirpyFind
+              </span>
+              <img src="bird.svg" alt="Chirpy Logo" className="w-10 h-10" />
+            </Link>
           </div>
 
           <div className="hidden md:flex md:items-center space-x-6">
-            {["/", "/birds", "/about"].map((path, idx) => {
-              const labels = ["Home", "Birds", "About"];
+            {["/", "/about", "/birds"].map((path, idx) => {
+              const labels = ["Home", "About", "Birds"];
+              const active = isActive(path);
               return (
                 <Link
                   key={path}
                   to={path}
                   style={{
-                    color: isActive(path)
-                      ? "var(--accent-bird)"
-                      : "var(--text-primary)",
+                    color: active
+                      ? "var(--color-success)"
+                      : "var(--color-text)",
                   }}
-                  className="font-medium transition"
+                  className="font-medium transition-colors"
                   onMouseEnter={(e) => {
-                    if (!isActive(path))
-                      e.currentTarget.style.color = "var(--accent-leaf)";
+                    if (!active)
+                      e.currentTarget.style.color =
+                        "var(--color-text-secondary)";
                   }}
                   onMouseLeave={(e) => {
-                    if (!isActive(path))
-                      e.currentTarget.style.color = "var(--text-primary)";
+                    if (!active)
+                      e.currentTarget.style.color = "var(--color-text)";
                   }}
                 >
                   {labels[idx]}
@@ -62,7 +62,7 @@ export function HeaderComponent() {
           <div className="flex items-center md:hidden">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              style={{ color: "var(--text-primary)" }}
+              style={{ color: "var(--color-text)" }}
               className="focus:outline-none"
             >
               {isOpen ? (
@@ -77,35 +77,35 @@ export function HeaderComponent() {
 
       {isOpen && (
         <div
-          style={{ backgroundColor: "var(--bg-light)" }}
+          style={{ backgroundColor: "var(--color-bg-dark)" }}
           className="md:hidden shadow-md"
         >
-          {["/", "/birds", "/about"].map((path, idx) => {
-            const labels = ["Home", "Birds", "About"];
+          {["/", "/about", "/birds"].map((path, idx) => {
+            const labels = ["Home", "About", "Birds"];
+            const active = isActive(path);
             return (
               <Link
                 key={path}
                 to={path}
                 style={{
-                  color: isActive(path)
-                    ? "var(--accent-bird)"
-                    : "var(--text-primary)",
-                  backgroundColor: isActive(path)
-                    ? "var(--bg-card)"
+                  color: active ? "var(--color-success)" : "var(--color-text)",
+                  backgroundColor: active
+                    ? "var(--color-card-dark)"
                     : "transparent",
                 }}
-                className="block px-4 py-2 transition"
+                className="block px-4 py-2 transition-colors"
                 onMouseEnter={(e) => {
-                  if (!isActive(path))
-                    e.currentTarget.style.color = "var(--accent-leaf)";
-                  if (!isActive(path))
-                    e.currentTarget.style.backgroundColor = "var(--bg-card)";
+                  if (!active) {
+                    e.currentTarget.style.color = "var(--color-text-secondary)";
+                    e.currentTarget.style.backgroundColor =
+                      "var(--color-card-dark)";
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  if (!isActive(path))
-                    e.currentTarget.style.color = "var(--text-primary)";
-                  if (!isActive(path))
+                  if (!active) {
+                    e.currentTarget.style.color = "var(--color-text)";
                     e.currentTarget.style.backgroundColor = "transparent";
+                  }
                 }}
               >
                 {labels[idx]}

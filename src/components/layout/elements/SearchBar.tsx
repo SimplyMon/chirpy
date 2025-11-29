@@ -21,7 +21,12 @@ const SearchBar: React.FC<Props> = React.memo(
         placeholder="Search birds..."
         value={searchTerm}
         onChange={handleChange}
-        className="border p-2 w-full rounded"
+        className="border rounded py-2 px-4 w-full
+                   bg-(--color-card-dark)
+                   text-(--color-text)
+                   placeholder-(--color-text-secondary)
+                   border-(--color-border-dark)
+                   focus:outline-none focus:ring-2 focus:ring-(--color-primary) focus:border-(--color-primary) transition-colors"
       />
     );
   }
