@@ -86,6 +86,12 @@ export const fetchBirdsPage = async (
     );
   }
 
+  filtered.sort((a, b) => {
+    const nameA = (a.comName ?? "").toLowerCase();
+    const nameB = (b.comName ?? "").toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
+
   const total = filtered.length;
   const start = (page - 1) * pageSize;
   const pageBirds = filtered.slice(start, start + pageSize);

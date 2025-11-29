@@ -1,8 +1,11 @@
+// this is v2
 import { useEffect, useState } from "react";
 import type { Bird } from "../../types/Bird";
 import { fetchBirdsPage } from "../../services/ebirdService";
-import SearchBar from "../elements/SearchBar";
+import SearchBar from "../layout/elements/SearchBar";
 import noimage from "../../assets/images/noimage.png";
+
+import BirdModal from "../layout/modals/BirdModal";
 
 const PAGE_SIZE = 12;
 const MAX_PAGE_BUTTONS = 5;
@@ -14,6 +17,20 @@ export function BirdsScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalBirds, setTotalBirds] = useState(0);
+
+  // 🔥 Modal state
+  const [selectedBird, setSelectedBird] = useState<Bird | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
+  const openModal = (bird: Bird) => {
+    setSelectedBird(bird);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setSelectedBird(null);
+    setShowModal(false);
+  };
 
   useEffect(() => {
     const loadBirds = async () => {
@@ -61,11 +78,14 @@ export function BirdsScreen() {
 
   return (
     <section
-      style={{ backgroundColor: "var(--bg-light)" }}
+      style={{
+        backgroundColor: "var(--color-bg-dark)",
+        color: "var(--color-text)",
+      }}
       className="pt-28 w-full px-4 sm:px-6 lg:px-12 min-h-screen"
     >
       <h1
-        style={{ color: "var(--text-primary)" }}
+        style={{ color: "var(--color-text)" }}
         className="text-4xl sm:text-5xl font-extrabold mb-8 text-center tracking-tight"
       >
         Bird Encyclopedia
@@ -88,31 +108,19 @@ export function BirdsScreen() {
               key={i}
               className="border rounded-xl p-6 shadow-lg animate-pulse"
               style={{
-                backgroundColor: "var(--bg-card)",
-                borderColor: "var(--border)",
+                backgroundColor: "var(--color-card-dark)",
+                borderColor: "var(--color-border-dark)",
               }}
             >
-              <div
-                className="h-6 w-3/4 mb-4 rounded"
-                style={{ backgroundColor: "var(--text-secondary)" }}
-              />
-              <div
-                className="h-4 w-1/2 mb-4 rounded"
-                style={{ backgroundColor: "var(--text-secondary)" }}
-              />
+              <div className="w-full h-48 mb-4 rounded-lg bg-gray-700" />
+
+              <div className="h-6 w-3/4 mb-2 rounded bg-gray-600" />
+
+              <div className="h-4 w-1/2 mb-4 rounded bg-gray-500" />
+
               <div className="space-y-2">
-                <div
-                  className="h-3 w-full rounded"
-                  style={{ backgroundColor: "var(--text-secondary)" }}
-                />
-                <div
-                  className="h-3 w-5/6 rounded"
-                  style={{ backgroundColor: "var(--text-secondary)" }}
-                />
-                <div
-                  className="h-3 w-2/3 rounded"
-                  style={{ backgroundColor: "var(--text-secondary)" }}
-                />
+                <div className="h-3 w-full rounded bg-gray-600" />
+                <div className="h-3 w-5/6 rounded bg-gray-600" />
               </div>
             </div>
           ))}
@@ -121,9 +129,9 @@ export function BirdsScreen() {
         <div
           className="p-6 max-w-3xl mx-auto rounded-lg border"
           style={{
-            borderColor: "var(--border)",
-            backgroundColor: "var(--bg-card)",
-            color: "red",
+            borderColor: "var(--color-border-dark)",
+            backgroundColor: "var(--color-card-dark)",
+            color: "#f87171",
           }}
         >
           <h2 className="text-2xl font-semibold mb-2">Error</h2>
@@ -131,7 +139,7 @@ export function BirdsScreen() {
         </div>
       ) : birds.length === 0 ? (
         <p
-          style={{ color: "var(--text-secondary)" }}
+          style={{ color: "var(--color-text-secondary)" }}
           className="mt-6 text-center text-lg"
         >
           No birds found for "
@@ -143,11 +151,12 @@ export function BirdsScreen() {
             {birds.map((bird) => (
               <div
                 key={bird.speciesCode}
-                className="border rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow duration-300"
+                onClick={() => openModal(bird)}
+                className="border rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
                 style={{
-                  backgroundColor: "var(--bg-card)",
-                  borderColor: "var(--border)",
-                  color: "var(--text-primary)",
+                  backgroundColor: "var(--color-card-dark)",
+                  borderColor: "var(--color-border-dark)",
+                  color: "var(--color-text)",
                 }}
               >
                 {bird.imageUrl && (
@@ -157,7 +166,7 @@ export function BirdsScreen() {
                     onError={(e) => {
                       e.currentTarget.src = noimage;
                     }}
-                    className="w-full h-48 object-contain rounded-lg mb-4 bg-gray-100"
+                    className="w-full h-48 object-contain rounded-lg mb-4 bg-gray-800"
                   />
                 )}
 
@@ -166,16 +175,11 @@ export function BirdsScreen() {
                 </h2>
                 <p
                   className="italic mb-4 text-sm"
-                  style={{ color: "var(--text-secondary)" }}
+                  style={{ color: "var(--color-text-secondary)" }}
                 >
                   {bird.scientificName}
                 </p>
                 <p className="text-sm space-y-1">
-                  <span>
-                    <span className="font-medium">Family: </span>
-                    {bird.family || "Unknown"}
-                  </span>
-                  <br />
                   <span>
                     <span className="font-medium">Order: </span>
                     {bird.order || "Unknown"}
@@ -191,80 +195,57 @@ export function BirdsScreen() {
           </div>
 
           <div className="flex flex-wrap justify-center items-center mt-12 gap-2 sm:gap-3">
-            {/* Previous Button */}
             <button
               onClick={() => goToPage(currentPage - 1)}
               disabled={currentPage === 1}
-              className="
-      px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg
-      border transition
-      disabled:opacity-40 disabled:cursor-not-allowed
-      hover:scale-105 hover:bg-opacity-80
-    "
+              className="px-4 py-2 rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                backgroundColor: "var(--bg-card)",
-                color: "var(--text-primary)",
-                borderColor: "var(--border)",
+                borderColor: "var(--color-border-dark)",
+                backgroundColor: "var(--color-card-dark)",
+                color: "var(--color-text)",
               }}
             >
               Previous
             </button>
 
-            {/* Page Buttons */}
             {getPageButtons().map((page) => (
               <button
                 key={page}
                 onClick={() => goToPage(page)}
-                className={`
-        px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg border transition
-        hover:scale-105 hover:bg-opacity-80
-      `}
+                className={`px-3 py-2 rounded-lg border transition-colors ${
+                  page === currentPage ? "font-bold" : ""
+                }`}
                 style={{
+                  borderColor: "var(--color-border-dark)",
                   backgroundColor:
-                    currentPage === page
-                      ? "var(--accent-bird)"
-                      : "var(--bg-card)",
-                  color:
-                    currentPage === page
-                      ? "var(--bg-light)"
-                      : "var(--text-primary)",
-                  borderColor: "var(--border)",
+                    page === currentPage
+                      ? "var(--color-success)"
+                      : "var(--color-card-dark)",
+                  color: page === currentPage ? "white" : "var(--color-text)",
                 }}
               >
                 {page}
               </button>
             ))}
 
-            {/* Ellipsis */}
-            {totalPages > getPageButtons()[getPageButtons().length - 1] && (
-              <span
-                className="px-2 text-lg"
-                style={{ color: "var(--text-secondary)" }}
-              >
-                …
-              </span>
-            )}
-
-            {/* Next Button */}
             <button
               onClick={() => goToPage(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="
-      px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg
-      border transition
-      disabled:opacity-40 disabled:cursor-not-allowed
-      hover:scale-105 hover:bg-opacity-80
-    "
+              className="px-4 py-2 rounded-lg border disabled:opacity-50 disabled:cursor-not-allowed"
               style={{
-                backgroundColor: "var(--bg-card)",
-                color: "var(--text-primary)",
-                borderColor: "var(--border)",
+                borderColor: "var(--color-border-dark)",
+                backgroundColor: "var(--color-card-dark)",
+                color: "var(--color-text)",
               }}
             >
               Next
             </button>
           </div>
         </>
+      )}
+
+      {showModal && selectedBird && (
+        <BirdModal bird={selectedBird} onClose={closeModal} />
       )}
     </section>
   );
