@@ -10,9 +10,8 @@ import BirdModal from "../layout/modals/BirdModal";
 
 const PAGE_SIZE = 8;
 const MAX_PAGE_BUTTONS = 5;
-const IMAGE_BATCH_SIZE = 2; // Batch images to reduce simultaneous requests
+const IMAGE_BATCH_SIZE = 2;
 
-// Memoized bird card to prevent re-renders
 const BirdCard = ({
   bird,
   onClick,
@@ -124,7 +123,6 @@ export function BirdsScreen() {
         setBirds(pageBirds);
         setTotalBirds(total);
 
-        // Fetch images asynchronously in batches
         fetchBirdImages(pageBirds);
       } catch (err: Error | unknown) {
         const errorMessage =

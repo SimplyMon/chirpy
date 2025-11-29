@@ -26,7 +26,6 @@ interface WikimediaPage {
 let cachedBirds: EbirdApiBird[] | null = null;
 const imageCache: Record<string, string> = {};
 
-/** Fetch Wikimedia image (cached) */
 export async function fetchWikimediaImage(
   scientificName: string
 ): Promise<string | null> {
@@ -61,7 +60,6 @@ export async function fetchWikimediaImage(
   return null;
 }
 
-/** Fetch birds page (optimized: return without waiting for images) */
 export const fetchBirdsPage = async (
   page: number,
   pageSize: number,
@@ -75,7 +73,6 @@ export const fetchBirdsPage = async (
     cachedBirds = await res.json();
   }
 
-  // Filter by search term
   let filtered = cachedBirds!;
   if (searchTerm.trim()) {
     filtered = cachedBirds!.filter((b) =>
@@ -83,14 +80,12 @@ export const fetchBirdsPage = async (
     );
   }
 
-  // Sort alphabetically
   filtered.sort((a, b) => (a.comName ?? "").localeCompare(b.comName ?? ""));
 
   const total = filtered.length;
   const start = (page - 1) * pageSize;
   const pageBirds = filtered.slice(start, start + pageSize);
 
-  // Return basic bird info immediately; images fetched asynchronously later
   const birds: Bird[] = pageBirds.map((item) => ({
     speciesCode: item.speciesCode,
     commonName: item.comName ?? "Unknown",
@@ -98,7 +93,7 @@ export const fetchBirdsPage = async (
     category: item.category,
     order: item.order,
     family: item.family,
-    imageUrl: undefined, // initially undefined
+    imageUrl: undefined,
   }));
 
   return { birds, total };
