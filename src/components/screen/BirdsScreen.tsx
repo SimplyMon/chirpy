@@ -1,11 +1,10 @@
+// this is v3
 import { useEffect, useState } from "react";
 import type { Bird } from "../../types/Bird";
-import {
-  fetchBirdsPage,
-  fetchWikimediaImage,
-} from "../../services/ebirdService";
+import { fetchBirdsPage } from "../../services/ebirdService";
 import SearchBar from "../layout/elements/SearchBar";
 import noimage from "../../assets/images/noimage.png";
+
 import BirdModal from "../layout/modals/BirdModal";
 
 const PAGE_SIZE = 8;
@@ -19,6 +18,7 @@ export function BirdsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [totalBirds, setTotalBirds] = useState(0);
 
+  // 🔥 Modal state
   const [selectedBird, setSelectedBird] = useState<Bird | null>(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -26,12 +26,12 @@ export function BirdsScreen() {
     setSelectedBird(bird);
     setShowModal(true);
   };
+
   const closeModal = () => {
     setSelectedBird(null);
     setShowModal(false);
   };
 
-  // Step 1: Fetch birds metadata
   useEffect(() => {
     const loadBirds = async () => {
       setLoading(true);
@@ -45,58 +45,49 @@ export function BirdsScreen() {
         setBirds(birds);
         setTotalBirds(total);
       } catch (err: Error | unknown) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        setError(
+          err instanceof Error ? err.message : "An unknown error occurred"
+        );
       } finally {
         setLoading(false);
       }
     };
+
     loadBirds();
   }, [currentPage, searchTerm]);
 
-  // Step 2: Lazy-load images after metadata is loaded
-  useEffect(() => {
-    const loadImages = async () => {
-      const updatedBirds = await Promise.all(
-        birds.map(async (bird) => {
-          if (bird.imageUrl) return bird;
-          try {
-            const url = await fetchWikimediaImage(bird.scientificName);
-            return { ...bird, imageUrl: url ?? noimage };
-          } catch {
-            return { ...bird, imageUrl: noimage };
-          }
-        })
-      );
-      setBirds(updatedBirds);
-    };
-    if (birds.length) loadImages();
-  }, [birds]);
-
   const totalPages = Math.ceil(totalBirds / PAGE_SIZE);
+
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
+
   const getPageButtons = () => {
     const buttons = [];
-    let start = Math.max(currentPage - Math.floor(MAX_PAGE_BUTTONS / 2), 1);
-    let end = start + MAX_PAGE_BUTTONS - 1;
-    if (end > totalPages) {
-      end = totalPages;
-      start = Math.max(end - MAX_PAGE_BUTTONS + 1, 1);
+    let startPage = Math.max(currentPage - Math.floor(MAX_PAGE_BUTTONS / 2), 1);
+    let endPage = startPage + MAX_PAGE_BUTTONS - 1;
+
+    if (endPage > totalPages) {
+      endPage = totalPages;
+      startPage = Math.max(endPage - MAX_PAGE_BUTTONS + 1, 1);
     }
-    for (let i = start; i <= end; i++) buttons.push(i);
+
+    for (let i = startPage; i <= endPage; i++) buttons.push(i);
     return buttons;
   };
 
   return (
     <section
-      className="pt-28 w-full px-4 sm:px-6 lg:px-12 min-h-screen"
       style={{
         backgroundColor: "var(--color-bg-dark)",
         color: "var(--color-text)",
       }}
+      className="pt-28 w-full px-4 sm:px-6 lg:px-12 min-h-screen"
     >
-      <h1 className="text-4xl sm:text-5xl font-extrabold mb-8 text-center tracking-tight">
+      <h1
+        style={{ color: "var(--color-text)" }}
+        className="text-4xl sm:text-5xl font-extrabold mb-8 text-center tracking-tight"
+      >
         Bird Encyclopedia
       </h1>
 
@@ -122,8 +113,11 @@ export function BirdsScreen() {
               }}
             >
               <div className="w-full h-48 mb-4 rounded-lg bg-gray-700" />
+
               <div className="h-6 w-3/4 mb-2 rounded bg-gray-600" />
+
               <div className="h-4 w-1/2 mb-4 rounded bg-gray-500" />
+
               <div className="space-y-2">
                 <div className="h-3 w-full rounded bg-gray-600" />
                 <div className="h-3 w-5/6 rounded bg-gray-600" />
@@ -165,15 +159,17 @@ export function BirdsScreen() {
                   color: "var(--color-text)",
                 }}
               >
-                <img
-                  src={bird.imageUrl ?? noimage}
-                  alt={bird.commonName}
-                  onError={(e) => {
-                    e.currentTarget.src = noimage;
-                  }}
-                  className="w-full h-48 object-contain rounded-lg mb-4 bg-gray-800"
-                  loading="lazy"
-                />
+                {bird.imageUrl && (
+                  <img
+                    src={bird.imageUrl || noimage}
+                    alt={bird.commonName}
+                    onError={(e) => {
+                      e.currentTarget.src = noimage;
+                    }}
+                    className="w-full h-48 object-contain rounded-lg mb-4 bg-gray-800"
+                  />
+                )}
+
                 <h2 className="text-xl sm:text-2xl font-semibold mb-2">
                   {bird.commonName}
                 </h2>
