@@ -114,7 +114,6 @@ export const fetchBirdsPage = async (
       : true
   );
 
-  // Sort once
   filtered.sort((a, b) => (a.comName ?? "").localeCompare(b.comName ?? ""));
 
   const total = filtered.length;
