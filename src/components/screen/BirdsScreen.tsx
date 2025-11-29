@@ -7,7 +7,7 @@ import noimage from "../../assets/images/noimage.png";
 
 import BirdModal from "../layout/modals/BirdModal";
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 8;
 const MAX_PAGE_BUTTONS = 5;
 
 export function BirdsScreen() {
