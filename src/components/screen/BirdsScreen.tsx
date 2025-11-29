@@ -1,5 +1,4 @@
-// this is v3
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import type { Bird } from "../../types/Bird";
 import {
   fetchBirdsPage,
@@ -7,11 +6,63 @@ import {
 } from "../../services/ebirdService";
 import SearchBar from "../layout/elements/SearchBar";
 import noimage from "../../assets/images/noimage.png";
-
 import BirdModal from "../layout/modals/BirdModal";
 
 const PAGE_SIZE = 8;
 const MAX_PAGE_BUTTONS = 5;
+const IMAGE_BATCH_SIZE = 2; // Batch images to reduce simultaneous requests
+
+// Memoized bird card to prevent re-renders
+const BirdCard = ({
+  bird,
+  onClick,
+}: {
+  bird: Bird;
+  onClick: (b: Bird) => void;
+}) => (
+  <div
+    onClick={() => onClick(bird)}
+    className="border rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
+    style={{
+      backgroundColor: "var(--color-card-dark)",
+      borderColor: "var(--color-border-dark)",
+      color: "var(--color-text)",
+    }}
+  >
+    {bird.imageUrl && (
+      <img
+        src={bird.imageUrl ?? noimage}
+        alt={bird.commonName}
+        loading="lazy"
+        onError={(e) => {
+          e.currentTarget.src = noimage;
+        }}
+        className="w-full h-48 object-contain rounded-lg mb-4 bg-gray-800"
+      />
+    )}
+
+    <h2 className="text-xl sm:text-2xl font-semibold mb-2">
+      {bird.commonName}
+    </h2>
+    <p
+      className="italic mb-4 text-sm"
+      style={{ color: "var(--color-text-secondary)" }}
+    >
+      {bird.scientificName}
+    </p>
+    <p className="text-sm space-y-1">
+      <span>
+        <span className="font-medium">Order: </span>
+        {bird.order || "Unknown"}
+      </span>
+      <br />
+      <span>
+        <span className="font-medium">Category: </span>
+        {bird.category || "Unknown"}
+      </span>
+    </p>
+  </div>
+);
 
 export function BirdsScreen() {
   const [birds, setBirds] = useState<Bird[]>([]);
@@ -21,7 +72,6 @@ export function BirdsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [totalBirds, setTotalBirds] = useState(0);
 
-  // 🔥 Modal state
   const [selectedBird, setSelectedBird] = useState<Bird | null>(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -35,27 +85,17 @@ export function BirdsScreen() {
     setShowModal(false);
   };
 
-  useEffect(() => {
-    const loadBirds = async () => {
-      setLoading(true);
-      setError(null);
+  const fetchBirdImages = useCallback(async (birdsToUpdate: Bird[]) => {
+    for (let i = 0; i < birdsToUpdate.length; i += IMAGE_BATCH_SIZE) {
+      const batch = birdsToUpdate.slice(i, i + IMAGE_BATCH_SIZE);
 
-      try {
-        const { birds, total } = await fetchBirdsPage(
-          currentPage,
-          PAGE_SIZE,
-          searchTerm
-        );
-        setBirds(birds);
-        setTotalBirds(total);
-
-        // Fetch images in the background
-        birds.forEach(async (bird, idx) => {
+      await Promise.all(
+        batch.map(async (bird, idx) => {
           const imageUrl = await fetchWikimediaImage(bird.scientificName);
           setBirds((prev) => {
             const newBirds = [...prev];
-            newBirds[idx] = {
-              ...newBirds[idx],
+            newBirds[i + idx] = {
+              ...newBirds[i + idx],
               imageUrl:
                 imageUrl ??
                 `https://via.placeholder.com/400x300?text=${encodeURIComponent(
@@ -64,20 +104,39 @@ export function BirdsScreen() {
             };
             return newBirds;
           });
-        });
-      } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError("An unknown error occurred");
-        }
+        })
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadBirds = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { birds: pageBirds, total } = await fetchBirdsPage(
+          currentPage,
+          PAGE_SIZE,
+          searchTerm
+        );
+
+        setBirds(pageBirds);
+        setTotalBirds(total);
+
+        // Fetch images asynchronously in batches
+        fetchBirdImages(pageBirds);
+      } catch (err: Error | unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : "An unknown error occurred";
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
     };
 
     loadBirds();
-  }, [currentPage, searchTerm]);
+  }, [currentPage, searchTerm, fetchBirdImages]);
 
   const totalPages = Math.ceil(totalBirds / PAGE_SIZE);
 
@@ -136,11 +195,8 @@ export function BirdsScreen() {
               }}
             >
               <div className="w-full h-48 mb-4 rounded-lg bg-gray-700" />
-
               <div className="h-6 w-3/4 mb-2 rounded bg-gray-600" />
-
               <div className="h-4 w-1/2 mb-4 rounded bg-gray-500" />
-
               <div className="space-y-2">
                 <div className="h-3 w-full rounded bg-gray-600" />
                 <div className="h-3 w-5/6 rounded bg-gray-600" />
@@ -172,48 +228,11 @@ export function BirdsScreen() {
         <>
           <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             {birds.map((bird) => (
-              <div
+              <BirdCard
                 key={bird.speciesCode}
-                onClick={() => openModal(bird)}
-                className="border rounded-xl p-6 shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
-                style={{
-                  backgroundColor: "var(--color-card-dark)",
-                  borderColor: "var(--color-border-dark)",
-                  color: "var(--color-text)",
-                }}
-              >
-                {bird.imageUrl && (
-                  <img
-                    src={bird.imageUrl || noimage}
-                    alt={bird.commonName}
-                    onError={(e) => {
-                      e.currentTarget.src = noimage;
-                    }}
-                    className="w-full h-48 object-contain rounded-lg mb-4 bg-gray-800"
-                  />
-                )}
-
-                <h2 className="text-xl sm:text-2xl font-semibold mb-2">
-                  {bird.commonName}
-                </h2>
-                <p
-                  className="italic mb-4 text-sm"
-                  style={{ color: "var(--color-text-secondary)" }}
-                >
-                  {bird.scientificName}
-                </p>
-                <p className="text-sm space-y-1">
-                  <span>
-                    <span className="font-medium">Order: </span>
-                    {bird.order || "Unknown"}
-                  </span>
-                  <br />
-                  <span>
-                    <span className="font-medium">Category: </span>
-                    {bird.category || "Unknown"}
-                  </span>
-                </p>
-              </div>
+                bird={bird}
+                onClick={openModal}
+              />
             ))}
           </div>
 
