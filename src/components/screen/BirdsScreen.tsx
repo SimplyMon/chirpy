@@ -1,7 +1,10 @@
 // this is v3
 import { useEffect, useState } from "react";
 import type { Bird } from "../../types/Bird";
-import { fetchBirdsPage } from "../../services/ebirdService";
+import {
+  fetchBirdsPage,
+  fetchWikimediaImage,
+} from "../../services/ebirdService";
 import SearchBar from "../layout/elements/SearchBar";
 import noimage from "../../assets/images/noimage.png";
 
@@ -36,6 +39,7 @@ export function BirdsScreen() {
     const loadBirds = async () => {
       setLoading(true);
       setError(null);
+
       try {
         const { birds, total } = await fetchBirdsPage(
           currentPage,
@@ -44,10 +48,29 @@ export function BirdsScreen() {
         );
         setBirds(birds);
         setTotalBirds(total);
-      } catch (err: Error | unknown) {
-        setError(
-          err instanceof Error ? err.message : "An unknown error occurred"
-        );
+
+        // Fetch images in the background
+        birds.forEach(async (bird, idx) => {
+          const imageUrl = await fetchWikimediaImage(bird.scientificName);
+          setBirds((prev) => {
+            const newBirds = [...prev];
+            newBirds[idx] = {
+              ...newBirds[idx],
+              imageUrl:
+                imageUrl ??
+                `https://via.placeholder.com/400x300?text=${encodeURIComponent(
+                  bird.commonName
+                )}`,
+            };
+            return newBirds;
+          });
+        });
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("An unknown error occurred");
+        }
       } finally {
         setLoading(false);
       }
