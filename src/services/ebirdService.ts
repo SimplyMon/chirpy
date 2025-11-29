@@ -24,15 +24,12 @@ interface WikimediaPage {
 }
 
 let cachedBirds: EbirdApiBird[] | null = null;
-
-const imageCache: Record<string, string> = {};
+const imageCache = new Map<string, string>();
 
 async function fetchWikimediaImage(
   scientificName: string
 ): Promise<string | null> {
-  if (imageCache[scientificName]) {
-    return imageCache[scientificName];
-  }
+  if (imageCache.has(scientificName)) return imageCache.get(scientificName)!;
 
   const search = encodeURIComponent(scientificName);
 
@@ -54,8 +51,8 @@ async function fetchWikimediaImage(
     const pageData = await pageRes.json();
     const page = Object.values(pageData.query.pages)[0] as WikimediaPage;
 
-    if (page.original && page.original.source) {
-      imageCache[scientificName] = page.original.source;
+    if (page.original?.source) {
+      imageCache.set(scientificName, page.original.source);
       return page.original.source;
     }
   } catch (err) {
@@ -63,6 +60,35 @@ async function fetchWikimediaImage(
   }
 
   return null;
+}
+
+// Utility for limiting concurrent promises
+async function mapWithConcurrency<T, R>(
+  arr: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const result: R[] = [];
+  const executing: Promise<void>[] = [];
+
+  for (const item of arr) {
+    const p = fn(item).then((res) => {
+      result.push(res);
+      return;
+    });
+    executing.push(p);
+
+    if (executing.length >= concurrency) {
+      // Wait for any promise to settle
+      await Promise.race(executing);
+      // Remove settled promises by filtering out those that are resolved
+      // Since Promise doesn't expose settled state, we can remove the first resolved promise
+      executing.splice(0, executing.length - concurrency + 1);
+    }
+  }
+
+  await Promise.all(executing);
+  return result;
 }
 
 export const fetchBirdsPage = async (
@@ -75,29 +101,30 @@ export const fetchBirdsPage = async (
       headers: { "X-eBirdApiToken": API_KEY },
     });
     if (!res.ok) throw new Error("Failed to fetch birds");
-
     cachedBirds = await res.json();
   }
 
-  let filtered = cachedBirds!;
-  if (searchTerm.trim()) {
-    filtered = cachedBirds!.filter((b) =>
-      (b.comName ?? "").toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  // Filter once
+  if (!cachedBirds) {
+    throw new Error("Birds data not loaded");
   }
+  const filtered = cachedBirds.filter((b) =>
+    searchTerm.trim()
+      ? (b.comName ?? "").toLowerCase().includes(searchTerm.toLowerCase())
+      : true
+  );
 
-  filtered.sort((a, b) => {
-    const nameA = (a.comName ?? "").toLowerCase();
-    const nameB = (b.comName ?? "").toLowerCase();
-    return nameA.localeCompare(nameB);
-  });
+  // Sort once
+  filtered.sort((a, b) => (a.comName ?? "").localeCompare(b.comName ?? ""));
 
   const total = filtered.length;
-  const start = (page - 1) * pageSize;
-  const pageBirds = filtered.slice(start, start + pageSize);
+  const pageBirds = filtered.slice((page - 1) * pageSize, page * pageSize);
 
-  const birdsWithImages: Bird[] = await Promise.all(
-    pageBirds.map(async (item) => {
+  // Limit concurrent image fetches to 4 to improve mobile performance
+  const birdsWithImages: Bird[] = await mapWithConcurrency(
+    pageBirds,
+    4,
+    async (item) => {
       const sciName = item.sciName ?? item.comName ?? "Bird";
       const imageUrl = await fetchWikimediaImage(sciName);
       return {
@@ -113,7 +140,7 @@ export const fetchBirdsPage = async (
             item.comName ?? "Bird"
           )}`,
       };
-    })
+    }
   );
 
   return { birds: birdsWithImages, total };
