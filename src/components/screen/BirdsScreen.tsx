@@ -96,7 +96,6 @@ export function BirdsScreen() {
             const newBirds = [...prev];
             const updateIndex = i + idx;
 
-            // 🔥 FIX: Prevent crash if index doesn't exist
             if (!newBirds[updateIndex]) return newBirds;
 
             newBirds[updateIndex] = {
