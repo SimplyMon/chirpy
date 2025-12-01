@@ -175,9 +175,12 @@ export function BirdsScreen() {
         <SearchBar
           searchTerm={searchTerm}
           setSearchTerm={(term) => {
-            setSearchTerm(term);
-            setCurrentPage(1);
+            if (!loading) {
+              setSearchTerm(term);
+              setCurrentPage(1);
+            }
           }}
+          disabled={loading}
         />
       </div>
 
