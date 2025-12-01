@@ -91,16 +91,22 @@ export function BirdsScreen() {
       await Promise.all(
         batch.map(async (bird, idx) => {
           const imageUrl = await fetchWikimediaImage(bird.scientificName);
+
           setBirds((prev) => {
             const newBirds = [...prev];
-            newBirds[i + idx] = {
-              ...newBirds[i + idx],
+            const updateIndex = i + idx;
+
+            if (!newBirds[updateIndex]) return newBirds;
+
+            newBirds[updateIndex] = {
+              ...newBirds[updateIndex],
               imageUrl:
                 imageUrl ??
                 `https://via.placeholder.com/400x300?text=${encodeURIComponent(
                   bird.commonName
                 )}`,
             };
+
             return newBirds;
           });
         })
@@ -175,9 +181,12 @@ export function BirdsScreen() {
         <SearchBar
           searchTerm={searchTerm}
           setSearchTerm={(term) => {
-            setSearchTerm(term);
-            setCurrentPage(1);
+            if (!loading) {
+              setSearchTerm(term);
+              setCurrentPage(1);
+            }
           }}
+          disabled={loading}
         />
       </div>
 
