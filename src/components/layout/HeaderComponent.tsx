@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+const NAV_ITEMS: { path: string; label: string }[] = [
+  { path: "/", label: "Home" },
+  { path: "/birds", label: "Birds" },
+  { path: "/about", label: "About" },
+  { path: "/blog", label: "Blog" },
+  { path: "/faq", label: "FAQ" },
+  { path: "/support", label: "Support" },
+];
+
 export function HeaderComponent() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
@@ -30,8 +39,7 @@ export function HeaderComponent() {
           </div>
 
           <div className="hidden md:flex md:items-center space-x-6">
-            {["/", "/about", "/birds"].map((path, idx) => {
-              const labels = ["Home", "About", "Birds"];
+            {NAV_ITEMS.map(({ path, label }) => {
               const active = isActive(path);
               return (
                 <Link
@@ -53,7 +61,7 @@ export function HeaderComponent() {
                       e.currentTarget.style.color = "var(--color-text)";
                   }}
                 >
-                  {labels[idx]}
+                  {label}
                 </Link>
               );
             })}
@@ -80,13 +88,13 @@ export function HeaderComponent() {
           style={{ backgroundColor: "var(--color-bg-dark)" }}
           className="md:hidden shadow-md"
         >
-          {["/", "/about", "/birds"].map((path, idx) => {
-            const labels = ["Home", "About", "Birds"];
+          {NAV_ITEMS.map(({ path, label }) => {
             const active = isActive(path);
             return (
               <Link
                 key={path}
                 to={path}
+                onClick={() => setIsOpen(false)}
                 style={{
                   color: active ? "var(--color-success)" : "var(--color-text)",
                   backgroundColor: active
@@ -108,7 +116,7 @@ export function HeaderComponent() {
                   }
                 }}
               >
-                {labels[idx]}
+                {label}
               </Link>
             );
           })}
