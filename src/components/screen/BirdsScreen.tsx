@@ -158,12 +158,12 @@ export function BirdsScreen() {
             imageUrl:
               imageUrl ??
               `https://via.placeholder.com/400x300?text=${encodeURIComponent(
-                bird.commonName
+                bird.commonName,
               )}`,
           };
           return next;
         });
-      })
+      }),
     );
   }, []);
 
@@ -177,7 +177,7 @@ export function BirdsScreen() {
           currentPage,
           PAGE_SIZE,
           searchTerm,
-          family
+          family,
         );
         setBirds(pageBirds);
         setTotalBirds(total);
@@ -204,7 +204,6 @@ export function BirdsScreen() {
       setLoading(true);
       setError(null);
       try {
-        // Pull everything, then keep favorites — taxonomy is already cached
         const { birds: all } = await fetchBirdsPage(1, 100000, "", "");
         const favBirds = all.filter((b) => favorites.includes(b.speciesCode));
         if (cancelled) return;
@@ -282,7 +281,9 @@ export function BirdsScreen() {
                 ? "#ef4444"
                 : "var(--color-card-dark)",
               color: favoritesOnly ? "#ffffff" : "var(--color-text)",
-              borderColor: favoritesOnly ? "#ef4444" : "var(--color-border-dark)",
+              borderColor: favoritesOnly
+                ? "#ef4444"
+                : "var(--color-border-dark)",
             }}
           >
             <i className={`${favoritesOnly ? "fas" : "far"} fa-heart`} />
