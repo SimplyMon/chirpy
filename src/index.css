@@ -93,3 +93,61 @@ body {
 .cloud-fast {
   animation-duration: 18s;
 }
+
+@keyframes shimmer-pulse {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(55, 65, 81, 0.4) 0%,
+    rgba(75, 85, 99, 0.6) 50%,
+    rgba(55, 65, 81, 0.4) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer-pulse 1.6s linear infinite;
+}
+
+.bird-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.bird-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--color-success) !important;
+  box-shadow: 0 12px 28px rgba(16, 185, 129, 0.15);
+}
+
+.bird-card .reveal-on-hover {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.bird-card:hover .reveal-on-hover {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fav-pulse {
+  animation: fav-pop 0.35s ease;
+}
+
+@keyframes fav-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

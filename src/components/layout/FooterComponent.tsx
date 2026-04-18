@@ -1,3 +1,18 @@
+import { Link } from "react-router-dom";
+
+const COMPANY_LINKS: { label: string; to: string }[] = [
+  { label: "Home", to: "/" },
+  { label: "About", to: "/about" },
+  { label: "Birds", to: "/birds" },
+  { label: "Support", to: "/support" },
+];
+
+const RESOURCE_LINKS: { label: string; to: string }[] = [
+  { label: "Blog", to: "/blog" },
+  { label: "FAQ", to: "/faq" },
+  { label: "Support", to: "/support" },
+];
+
 export function FooterComponent() {
   return (
     <footer
@@ -24,7 +39,7 @@ export function FooterComponent() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 md:w-2/3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 md:w-2/3">
             <div>
               <h4
                 style={{ color: "var(--color-text)" }}
@@ -36,15 +51,15 @@ export function FooterComponent() {
                 style={{ color: "var(--color-text-secondary)" }}
                 className="space-y-2"
               >
-                {["Home", "About", "Birds", "Contact"].map((link) => (
-                  <li key={link}>
-                    <a
-                      href="#"
+                {COMPANY_LINKS.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      to={link.to}
                       style={{ color: "var(--color-text-secondary)" }}
                       className="hover:text-(--color-success) transition-colors duration-300"
                     >
-                      {link}
-                    </a>
+                      {link.label}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -61,15 +76,15 @@ export function FooterComponent() {
                 style={{ color: "var(--color-text-secondary)" }}
                 className="space-y-2"
               >
-                {["Blog", "FAQ", "Support"].map((link) => (
-                  <li key={link}>
-                    <a
-                      href="#"
+                {RESOURCE_LINKS.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      to={link.to}
                       style={{ color: "var(--color-text-secondary)" }}
                       className="hover:text-(--color-success) transition-colors duration-300"
                     >
-                      {link}
-                    </a>
+                      {link.label}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -86,8 +101,24 @@ export function FooterComponent() {
                 style={{ color: "var(--color-text-secondary)" }}
                 className="space-y-2"
               >
-                <li>Email: mon.dev005@gmail.com</li>
-                <li>Phone: 09927199525</li>
+                <li>
+                  <a
+                    href="mailto:mon.dev005@gmail.com"
+                    style={{ color: "var(--color-text-secondary)" }}
+                    className="hover:text-(--color-success) transition-colors duration-300"
+                  >
+                    mon.dev005@gmail.com
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="tel:+639927199525"
+                    style={{ color: "var(--color-text-secondary)" }}
+                    className="hover:text-(--color-success) transition-colors duration-300"
+                  >
+                    09927199525
+                  </a>
+                </li>
               </ul>
             </div>
           </div>

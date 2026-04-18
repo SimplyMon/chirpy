@@ -1,160 +1,98 @@
 import { useEffect, useState } from "react";
 import noimage from "../../../assets/images/noimage.png";
-import type { Bird } from "../../../types/Bird";
+import type { Bird, BirdDetails } from "../../../types/Bird";
+import {
+  fetchBirdDetails,
+  fetchSimilarBirds,
+  fetchWikimediaImage,
+} from "../../../services/ebirdService";
+import ConservationBadge from "../elements/ConservationBadge";
 
 interface BirdModalProps {
   bird: Bird;
   onClose: () => void;
+  onSelectSimilar?: (bird: Bird) => void;
+  isFavorite?: boolean;
+  onToggleFavorite?: (speciesCode: string) => void;
 }
 
-interface WikiData {
-  habitat: string | null;
-  region: string | null;
-  summary: string | null;
-  funFacts: string | null;
-  conservation: string | null;
-}
+const emptyDetails: BirdDetails = {
+  summary: null,
+  habitat: null,
+  region: null,
+  diet: null,
+  funFact: null,
+  conservation: "UNKNOWN",
+  mass: null,
+  length: null,
+  wikipediaUrl: null,
+};
 
-export default function BirdModal({ bird, onClose }: BirdModalProps) {
-  const [wiki, setWiki] = useState<WikiData>({
-    habitat: null,
-    region: null,
-    summary: null,
-    funFacts: null,
-    conservation: null,
-  });
-
+export default function BirdModal({
+  bird,
+  onClose,
+  onSelectSimilar,
+  isFavorite = false,
+  onToggleFavorite,
+}: BirdModalProps) {
+  const [details, setDetails] = useState<BirdDetails>(emptyDetails);
   const [loading, setLoading] = useState(true);
+  const [similar, setSimilar] = useState<Bird[]>([]);
+  const [similarWithImages, setSimilarWithImages] = useState<Bird[]>([]);
 
   useEffect(() => {
-    const fetchWiki = async () => {
-      try {
-        setLoading(true);
-        const title = encodeURIComponent(bird.scientificName);
-        const res = await fetch(
-          `https://en.wikipedia.org/api/rest_v1/page/summary/${title}`
-        );
+    let cancelled = false;
+    setDetails(emptyDetails);
+    setSimilar([]);
+    setSimilarWithImages([]);
+    setLoading(true);
 
-        if (!res.ok) {
-          setWiki({
-            habitat: "Not available",
-            region: "Not available",
-            summary: "Not available",
-            funFacts: "Not available",
-            conservation: "Not available",
-          });
-          return;
-        }
+    Promise.all([
+      fetchBirdDetails(bird.scientificName),
+      fetchSimilarBirds(bird, 4),
+    ]).then(([d, s]) => {
+      if (cancelled) return;
+      setDetails(d);
+      setSimilar(s);
+      setSimilarWithImages(s);
+      setLoading(false);
 
-        const data = await res.json();
-        const extract: string = data.extract ?? "";
-
-        const habitat =
-          extract.match(/(habitat|lives in|found in|native to)[^.]+/i)?.[0] ??
-          "Not available";
-
-        const region =
-          extract.match(
-            /(Africa|Asia|Europe|North America|South America|Australia|Oceania|worldwide|cosmopolitan)/i
-          )?.[0] ?? "Not available";
-
-        const funFacts = (() => {
-          const sentences = extract
-            .split(". ")
-            .map((s) => s.trim())
-            .filter((s) => s.length > 60);
-          const genericPhrases = [
-            "it is a species",
-            "this species is",
-            "it belongs to",
-            "it is found in",
-            "the family",
-            "the genus",
-            "it is native to",
-          ];
-          const keywords = [
-            "migrates",
-            "nests",
-            "feeds",
-            "calls",
-            "dances",
-            "colorful",
-            "rare",
-            "unique",
-            "remarkable",
-            "lifespan",
-            "speed",
-            "size",
-            "behavior",
-            "interesting",
-          ];
-          const meaningful = sentences.filter(
-            (sentence) =>
-              !genericPhrases.some((phrase) =>
-                sentence.toLowerCase().includes(phrase)
-              )
+      // Lazy-load similar bird images
+      s.forEach(async (sb) => {
+        const url = await fetchWikimediaImage(sb.scientificName);
+        if (cancelled) return;
+        setSimilarWithImages((prev) => {
+          const idx = prev.findIndex(
+            (b) => b.speciesCode === sb.speciesCode
           );
-          const quirky = meaningful.find((sentence) =>
-            keywords.some((keyword) => sentence.toLowerCase().includes(keyword))
-          );
-          return (quirky || meaningful[0] || "Not available") + ".";
-        })();
-
-        let conservation = "Not available";
-        if (data.wikibase_item) {
-          const wikidataRes = await fetch(
-            `https://www.wikidata.org/wiki/Special:EntityData/${data.wikibase_item}.json`
-          );
-          if (wikidataRes.ok) {
-            const wikidataJson = await wikidataRes.json();
-            const entity = wikidataJson.entities[data.wikibase_item];
-            const statusClaim =
-              entity.claims?.P141?.[0]?.mainsnak?.datavalue?.value?.id;
-            if (statusClaim) {
-              const statusLabelRes = await fetch(
-                `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${statusClaim}&format=json&origin=*`
-              );
-              if (statusLabelRes.ok) {
-                const statusLabelJson = await statusLabelRes.json();
-                conservation =
-                  statusLabelJson.entities[statusClaim]?.labels?.en?.value ||
-                  "Not available";
-              }
-            }
-          }
-        }
-
-        setWiki({
-          habitat,
-          region,
-          summary: extract || "Not available",
-          funFacts,
-          conservation,
+          if (idx === -1) return prev;
+          const next = [...prev];
+          next[idx] = { ...next[idx], imageUrl: url ?? undefined };
+          return next;
         });
-      } catch (err) {
-        console.warn("Wiki summary error:", err);
-        setWiki({
-          habitat: "Not available",
-          region: "Not available",
-          summary: "Not available",
-          funFacts: "Not available",
-          conservation: "Not available",
-        });
-      } finally {
-        setLoading(false);
-      }
+      });
+    });
+
+    return () => {
+      cancelled = true;
     };
+  }, [bird]);
 
-    fetchWiki();
-  }, [bird.scientificName]);
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [onClose]);
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 transition-opacity animate-fade-in"
+      className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 animate-fade-in"
       onClick={onClose}
     >
       <div
-        className="rounded-2xl shadow-2xl overflow-y-auto max-h-[80vh] w-full max-w-4xl p-6 relative animate-slide-up flex flex-col md:flex-row gap-6 modal-scrollbar"
+        className="rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh] w-full max-w-5xl relative animate-slide-up modal-scrollbar"
         style={{
           backgroundColor: "var(--color-card-dark)",
           color: "var(--color-text)",
@@ -163,171 +101,330 @@ export default function BirdModal({ bird, onClose }: BirdModalProps) {
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-2xl transition-colors"
-          style={{ color: "var(--color-text-secondary)" }}
-          onMouseEnter={(e) =>
-            (e.currentTarget.style.color = "var(--color-text)")
-          }
-          onMouseLeave={(e) =>
-            (e.currentTarget.style.color = "var(--color-text-secondary)")
-          }
+          className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center z-10 backdrop-blur-sm transition-transform hover:scale-110"
+          style={{
+            backgroundColor: "rgba(17, 24, 39, 0.7)",
+            color: "#f9fafb",
+          }}
+          aria-label="Close"
         >
-          <i className="fas fa-times"></i>
+          <i className="fas fa-times" />
         </button>
 
-        <div className="shrink-0 md:w-1/2 flex justify-center items-center bg-card-dark rounded-xl shadow-inner p-2">
-          <img
-            src={bird.imageUrl || noimage}
-            alt={bird.commonName}
-            className="object-contain w-full h-64 md:h-full rounded-xl"
-            onError={(e) => (e.currentTarget.src = noimage)}
-          />
-        </div>
-
-        <div className="flex-1 flex flex-col justify-start md:justify-between gap-4 p-4 md:p-6">
-          <div className="text-center md:text-left">
-            <h2
-              className="text-3xl font-bold"
-              style={{ color: "var(--color-text)" }}
-            >
-              {bird.commonName}
-            </h2>
-            <p
-              className="italic"
-              style={{ color: "var(--color-text-secondary)" }}
-            >
-              {bird.scientificName}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <i
-                className="fas fa-feather"
-                style={{ color: "var(--color-success)" }}
-              ></i>
-              <div>
-                <p
-                  className="font-semibold"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  Order
-                </p>
-                <p style={{ color: "var(--color-text-secondary)" }}>
-                  {bird.order || "Unknown"}
+        <div className="grid md:grid-cols-2 gap-0">
+          <div className="relative h-64 md:h-auto md:min-h-[460px] bg-gray-900">
+            {bird.imageUrl ? (
+              <img
+                src={bird.imageUrl}
+                alt={bird.commonName}
+                className="w-full h-full object-cover"
+                onError={(e) => (e.currentTarget.src = noimage)}
+              />
+            ) : (
+              <div className="w-full h-full shimmer" />
+            )}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "linear-gradient(to top, rgba(31,41,55,0.9) 0%, transparent 35%)",
+              }}
+            />
+            <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-2xl md:text-3xl font-extrabold leading-tight drop-shadow-lg">
+                  {bird.commonName}
+                </h2>
+                <p className="italic text-sm opacity-90 drop-shadow">
+                  {bird.scientificName}
                 </p>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <i
-                className="fas fa-globe"
-                style={{ color: "var(--color-success-dark)" }}
-              ></i>
-              <div>
-                <p
-                  className="font-semibold"
-                  style={{ color: "var(--color-text)" }}
+              {onToggleFavorite && (
+                <button
+                  onClick={() => onToggleFavorite(bird.speciesCode)}
+                  aria-label={
+                    isFavorite ? "Remove from favorites" : "Add to favorites"
+                  }
+                  className="w-11 h-11 rounded-full flex items-center justify-center backdrop-blur-sm shrink-0 transition-transform hover:scale-110"
+                  style={{
+                    backgroundColor: "rgba(17, 24, 39, 0.7)",
+                    color: isFavorite ? "#ef4444" : "#f9fafb",
+                  }}
                 >
-                  Category
-                </p>
-                <p style={{ color: "var(--color-text-secondary)" }}>
-                  {bird.category || "Unknown"}
-                </p>
-              </div>
+                  <i
+                    className={`${isFavorite ? "fas" : "far"} fa-heart text-lg`}
+                  />
+                </button>
+              )}
             </div>
           </div>
 
-          <hr
-            style={{ borderColor: "var(--color-border-dark)" }}
-            className="my-2"
-          />
+          <div className="p-6 md:p-8 flex flex-col gap-5">
+            <div className="flex flex-wrap gap-2">
+              {loading ? (
+                <div className="h-6 w-24 rounded-full shimmer" />
+              ) : (
+                <ConservationBadge
+                  status={details.conservation}
+                  size="md"
+                />
+              )}
+              {bird.category && (
+                <span
+                  className="inline-flex items-center text-xs font-semibold uppercase tracking-wide px-3 py-1 rounded-full"
+                  style={{
+                    backgroundColor: "rgba(59, 130, 246, 0.15)",
+                    color: "var(--color-primary)",
+                    border: "1px solid var(--color-primary)",
+                  }}
+                >
+                  {bird.category}
+                </span>
+              )}
+            </div>
 
-          {loading ? (
-            <p
-              className="text-center"
-              style={{ color: "var(--color-text-secondary)" }}
-            >
-              Loading info...
-            </p>
-          ) : (
-            <div className="flex flex-col gap-3 text-sm">
-              <div className="flex gap-2">
-                <i
-                  className="fas fa-tree"
-                  style={{ color: "var(--color-success)" }}
-                ></i>
-                <p
-                  className="font-semibold"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  Habitat:
-                </p>
-                <p style={{ color: "var(--color-text-secondary)" }}>
-                  {wiki.habitat}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <i
-                  className="fas fa-globe"
-                  style={{ color: "var(--color-success-dark)" }}
-                ></i>
-                <p
-                  className="font-semibold"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  Region:
-                </p>
-                <p style={{ color: "var(--color-text-secondary)" }}>
-                  {wiki.region}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <i
-                  className="fas fa-heartbeat"
-                  style={{ color: "#ef4444" }}
-                ></i>
-                <p
-                  className="font-semibold"
-                  style={{ color: "var(--color-text)" }}
-                >
-                  Conservation:
-                </p>
-                <p style={{ color: "var(--color-text-secondary)" }}>
-                  {wiki.conservation}
-                </p>
-              </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <Stat
+                icon="fa-sitemap"
+                label="Order"
+                value={bird.order || "Unknown"}
+              />
+              <Stat
+                icon="fa-dove"
+                label="Family"
+                value={bird.family || "Unknown"}
+              />
+              <Stat
+                icon="fa-weight-hanging"
+                label="Weight"
+                value={loading ? null : details.mass || "—"}
+              />
+              <Stat
+                icon="fa-ruler"
+                label="Length"
+                value={loading ? null : details.length || "—"}
+              />
+            </div>
 
+            <div className="space-y-3 text-sm">
+              <InfoRow
+                icon="fa-tree"
+                color="var(--color-success)"
+                label="Habitat"
+                value={details.habitat}
+                loading={loading}
+              />
+              <InfoRow
+                icon="fa-globe"
+                color="var(--color-primary)"
+                label="Region"
+                value={details.region}
+                loading={loading}
+              />
+              <InfoRow
+                icon="fa-utensils"
+                color="#f59e0b"
+                label="Diet"
+                value={details.diet}
+                loading={loading}
+              />
+            </div>
+
+            {!loading && details.funFact && (
               <div
-                className="p-4 rounded-lg"
+                className="p-4 rounded-xl border"
                 style={{
-                  backgroundColor: "var(--color-success-dark)",
+                  backgroundColor: "rgba(16, 185, 129, 0.12)",
                   borderColor: "var(--color-success)",
-                  color: "var(--color-text)",
                 }}
               >
                 <p
-                  className="font-semibold mb-1"
-                  style={{ color: "var(--color-text)" }}
+                  className="flex items-center gap-2 font-bold mb-1"
+                  style={{ color: "var(--color-success)" }}
                 >
-                  Fun Fact
+                  <i className="fas fa-lightbulb" />
+                  Did you know?
                 </p>
-                <p style={{ color: "var(--color-text)" }}>{wiki.funFacts}</p>
-              </div>
-
-              <div className="py-2 text-justify text-sm">
-                <span
-                  className="font-bold"
+                <p
+                  className="text-sm"
                   style={{ color: "var(--color-text)" }}
                 >
-                  Summary:
-                </span>{" "}
-                <span style={{ color: "var(--color-text-secondary)" }}>
-                  {wiki.summary}
-                </span>
+                  {details.funFact}
+                </p>
               </div>
-            </div>
-          )}
+            )}
+
+            {!loading && details.summary && (
+              <details className="text-sm">
+                <summary
+                  className="cursor-pointer font-semibold mb-2"
+                  style={{ color: "var(--color-text)" }}
+                >
+                  Read more
+                </summary>
+                <p
+                  className="text-justify leading-relaxed mt-2"
+                  style={{ color: "var(--color-text-secondary)" }}
+                >
+                  {details.summary}
+                </p>
+                {details.wikipediaUrl && (
+                  <a
+                    href={details.wikipediaUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 mt-2 text-sm font-semibold"
+                    style={{ color: "var(--color-primary)" }}
+                  >
+                    Read full article on Wikipedia{" "}
+                    <i className="fas fa-external-link-alt text-xs" />
+                  </a>
+                )}
+              </details>
+            )}
+          </div>
         </div>
+
+        {similar.length > 0 && (
+          <div
+            className="px-6 md:px-8 pb-8 pt-2 border-t"
+            style={{ borderColor: "var(--color-border-dark)" }}
+          >
+            <h3 className="text-lg font-bold mt-6 mb-4 flex items-center gap-2">
+              <i
+                className="fas fa-feather-alt"
+                style={{ color: "var(--color-success)" }}
+              />
+              Similar Birds
+              <span
+                className="text-xs font-normal"
+                style={{ color: "var(--color-text-secondary)" }}
+              >
+                (from family {bird.family})
+              </span>
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {similarWithImages.map((sb) => (
+                <button
+                  key={sb.speciesCode}
+                  onClick={() => onSelectSimilar?.(sb)}
+                  className="bird-card rounded-xl overflow-hidden border text-left"
+                  style={{
+                    backgroundColor: "var(--color-bg-dark)",
+                    borderColor: "var(--color-border-dark)",
+                  }}
+                >
+                  <div className="h-24 bg-gray-800 overflow-hidden">
+                    {sb.imageUrl ? (
+                      <img
+                        src={sb.imageUrl}
+                        alt={sb.commonName}
+                        className="w-full h-full object-cover"
+                        onError={(e) => (e.currentTarget.src = noimage)}
+                      />
+                    ) : (
+                      <div className="w-full h-full shimmer" />
+                    )}
+                  </div>
+                  <div className="p-2">
+                    <p className="text-xs font-semibold truncate">
+                      {sb.commonName}
+                    </p>
+                    <p
+                      className="text-[10px] italic truncate"
+                      style={{ color: "var(--color-text-secondary)" }}
+                    >
+                      {sb.scientificName}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Stat({
+  icon,
+  label,
+  value,
+}: {
+  icon: string;
+  label: string;
+  value: string | null;
+}) {
+  return (
+    <div
+      className="rounded-lg p-3 border"
+      style={{
+        backgroundColor: "var(--color-bg-dark)",
+        borderColor: "var(--color-border-dark)",
+      }}
+    >
+      <div
+        className="text-[10px] uppercase tracking-wide font-semibold flex items-center gap-1.5 mb-1"
+        style={{ color: "var(--color-text-secondary)" }}
+      >
+        <i className={`fas ${icon}`} style={{ color: "var(--color-success)" }} />
+        {label}
+      </div>
+      {value === null ? (
+        <div className="h-4 w-16 rounded shimmer" />
+      ) : (
+        <p
+          className="text-sm font-semibold truncate"
+          style={{ color: "var(--color-text)" }}
+        >
+          {value}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function InfoRow({
+  icon,
+  color,
+  label,
+  value,
+  loading,
+}: {
+  icon: string;
+  color: string;
+  label: string;
+  value: string | null;
+  loading: boolean;
+}) {
+  return (
+    <div className="flex gap-3 items-start">
+      <i
+        className={`fas ${icon} mt-0.5`}
+        style={{ color, minWidth: "16px" }}
+      />
+      <div className="flex-1 min-w-0">
+        <p
+          className="font-semibold text-xs uppercase tracking-wide"
+          style={{ color: "var(--color-text-secondary)" }}
+        >
+          {label}
+        </p>
+        {loading ? (
+          <div className="h-4 w-full rounded shimmer mt-1" />
+        ) : (
+          <p style={{ color: "var(--color-text)" }}>
+            {value ?? (
+              <span
+                className="italic"
+                style={{ color: "var(--color-text-secondary)" }}
+              >
+                Not available
+              </span>
+            )}
+          </p>
+        )}
       </div>
     </div>
   );
